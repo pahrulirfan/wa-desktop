@@ -491,12 +491,17 @@ python tools/make_screenshots.py
 and whether you use X11 or Wayland. Start the app from a terminal and include any error messages it prints
 (remove personal information first).
 
-Contributions are welcome. Open an issue to discuss larger changes before sending a pull request.
+Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for the development setup, a manual test
+checklist and the known gotchas. Open an issue to discuss larger changes before sending a pull request.
 
 ## Roadmap
 
 These are ideas, not commitments:
 
+- [ ] **Windows build** (installer + portable zip). Needs: Windows-safe single-instance and root checks (the code
+      currently uses `os.getuid()`), tray-based notifications instead of `notify-send`, registry-based autostart,
+      `%APPDATA%` data paths, an `.ico` icon, and a PyInstaller + Inno Setup pipeline on GitHub Actions. Unsigned
+      builds will show a Windows SmartScreen warning.
 - [ ] **Snap Store package.** Confinement will need the tray (StatusNotifier over D-Bus), notifications (moving
       from `notify-send` to a D-Bus/portal call) and opening links via the desktop portal.
 - [ ] Other packaging formats (`.deb`, Flatpak, AppImage).
