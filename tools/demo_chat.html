@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>(3) Demo chat</title>
+<style>
+  :root { --bg:#fff; --panel:#fff; --side:#fff; --head:#f0f2f5; --line:#e9edef; --text:#111b21; --muted:#667781;
+          --in:#fff; --out:#d9fdd3; --wall:#efeae2; --accent:#00a884; --hover:#f5f6f6; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#111b21; --panel:#111b21; --side:#111b21; --head:#202c33; --line:#222d34; --text:#e9edef; --muted:#8696a0;
+            --in:#202c33; --out:#005c4b; --wall:#0b141a; --accent:#00a884; --hover:#202c33; } }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; font:15px/1.35 "Segoe UI", "Noto Sans", "Ubuntu", system-ui, sans-serif; color:var(--text); background:var(--bg); }
+  #app { display:flex; height:100%; }
+  #pane-side { width:380px; border-right:1px solid var(--line); background:var(--side); overflow:hidden; flex:none; }
+  .side-head { height:60px; background:var(--head); display:flex; align-items:center; padding:0 16px; font-weight:600; font-size:18px; }
+  .search { margin:8px 12px; padding:8px 14px; border-radius:8px; background:var(--head); color:var(--muted); font-size:14px; }
+  [role="listitem"] { display:flex; gap:14px; align-items:center; height:72px; padding:0 16px; border-bottom:1px solid var(--line); }
+  [role="listitem"] .av { width:48px; height:48px; border-radius:50%; flex:none; display:grid; place-items:center; color:#fff; font-weight:600; font-size:17px; }
+  .meta { flex:1; min-width:0; }
+  .top { display:flex; justify-content:space-between; gap:8px; }
+  .name { font-size:16px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .time { font-size:12px; color:var(--muted); }
+  .time.new { color:var(--accent); }
+  .prev { display:flex; justify-content:space-between; gap:8px; color:var(--muted); font-size:14px; margin-top:2px; }
+  .prev span:first-child { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .badge { background:var(--accent); color:#fff; border-radius:11px; min-width:21px; height:21px; padding:0 6px; font-size:12px; display:grid; place-items:center; font-weight:600; }
+  #main { flex:1; display:flex; flex-direction:column; background:var(--wall); min-width:0; }
+  #main header { height:60px; background:var(--head); display:flex; align-items:center; gap:14px; padding:0 18px; }
+  #main header .av { width:40px; height:40px; border-radius:50%; background:#6c63ff; color:#fff; display:grid; place-items:center; font-weight:600; }
+  #main header b { display:block; font-size:16px; font-weight:500; } #main header small { color:var(--muted); }
+  .msgs { flex:1; padding:22px 8% ; display:flex; flex-direction:column; gap:6px; overflow:hidden; }
+  [role="row"] { display:flex; } [role="row"].r { justify-content:flex-end; }
+  .message-in, .message-out { max-width:62%; padding:7px 10px 6px; border-radius:9px; box-shadow:0 1px 1px rgba(0,0,0,.12); }
+  .message-in { background:var(--in); } .message-out { background:var(--out); }
+  .message-in small, .message-out small { display:block; text-align:right; font-size:11px; color:var(--muted); margin-top:2px; }
+  .compose { height:62px; background:var(--head); display:flex; align-items:center; padding:0 16px; }
+  .compose div { flex:1; background:var(--bg); border-radius:9px; padding:10px 14px; color:var(--muted); }
+</style></head>
+<body><div id="app">
+  <div id="pane-side">
+    <div class="side-head">Chats</div>
+    <div class="search">Search or start a new chat</div>
+    <div role="listitem" id="li0"><div class="av" style="background:#e5484d">AM</div><div class="meta"><div class="top"><span class="name">Alex Morgan</span><span class="time new">10:42</span></div><div class="prev"><span>Sounds good, see you at the station!</span><span class="badge">2</span></div></div></div>
+    <div role="listitem" id="li1"><div class="av" style="background:#6c63ff">DT</div><div class="meta"><div class="top"><span class="name">Design Team</span><span class="time new">10:15</span></div><div class="prev"><span>Priya: The new mockups are in the shared folder</span><span class="badge">1</span></div></div></div>
+    <div role="listitem" id="li2"><div class="av" style="background:#f5a524">M</div><div class="meta"><div class="top"><span class="name">Mom</span><span class="time">09:30</span></div><div class="prev"><span>Don't forget to call grandma tonight</span></div></div></div>
+    <div role="listitem" id="li3"><div class="av" style="background:#12a594">PP</div><div class="meta"><div class="top"><span class="name">Priya Patel</span><span class="time">Yesterday</span></div><div class="prev"><span>Thanks for the notes from the meeting!</span></div></div></div>
+    <div role="listitem" id="li4"><div class="av" style="background:#0091ff">DC</div><div class="meta"><div class="top"><span class="name">Dr. Chen</span><span class="time">Yesterday</span></div><div class="prev"><span>Your appointment is confirmed for Friday</span></div></div></div>
+    <div role="listitem" id="li5"><div class="av" style="background:#d6409f">BC</div><div class="meta"><div class="top"><span class="name">Book Club</span><span class="time">Tuesday</span></div><div class="prev"><span>Jordan: Next month's pick is a surprise</span></div></div></div>
+    <div role="listitem" id="li6"><div class="av" style="background:#30a46c">SW</div><div class="meta"><div class="top"><span class="name">Sam (Work)</span><span class="time">Monday</span></div><div class="prev"><span>Invoice sent, let me know if it arrives</span></div></div></div>
+  </div>
+  <div id="main">
+    <header><div class="av">AM</div><div><b>Alex Morgan</b><small>online</small></div></header>
+    <div class="msgs">
+      <div role="row"><div class="message-in">Hey! Are we still on for the hike on Saturday?<small>10:38</small></div></div>
+      <div role="row" class="r"><div class="message-out">Absolutely. I'll bring the snacks 🥪<small>10:39</small></div></div>
+      <div role="row"><div class="message-in">Perfect. Meet at the station at 8?<small>10:40</small></div></div>
+      <div role="row" class="r"><div class="message-out">Works for me. I'll check the weather tonight.<small>10:41</small></div></div>
+      <div role="row"><div class="message-in">Sounds good, see you at the station!<small>10:42</small></div></div>
+    </div>
+    <div class="compose"><div>Type a message</div></div>
+  </div>
+</div></body></html>

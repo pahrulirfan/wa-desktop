@@ -1,0 +1,19 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=WA Desktop
+GenericName=Instant Messenger
+Comment=WhatsApp on the Linux desktop, without a browser
+Exec=@EXEC@ %U
+Icon=wadesk
+Terminal=false
+Categories=Network;InstantMessaging;Chat;
+Keywords=whatsapp;chat;messenger;message;wa;
+StartupWMClass=wadesk
+StartupNotify=true
+X-GNOME-UsesNotifications=true
+Actions=Hidden;
+
+[Desktop Action Hidden]
+Name=Start hidden in the tray
+Exec=@EXEC@ --minimized
