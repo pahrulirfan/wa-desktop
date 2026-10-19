@@ -1,4 +1,4 @@
-"""User settings, stored as JSON in ~/.config/wadesk."""
+"""User settings, stored as JSON in the config folder (see paths.py)."""
 
 import json
 from pathlib import Path
@@ -33,6 +33,39 @@ DEFAULTS = {
     "privacy_blur_away": False,
     "privacy_blur_level": 8,
 }
+THEMES = ("system", "light", "dark")
+BLUR_LEVELS = (4, 8, 14, 22)
+ZOOM_RANGE = (0.5, 2.0)
+
+
+def _typed(value, default):
+    """The value if it has the default's type, else None. bool is not an int here, an int is a float."""
+    if isinstance(default, bool) or isinstance(value, bool):
+        return value if isinstance(value, bool) and isinstance(default, bool) else None
+    if isinstance(default, float) and isinstance(value, int):
+        return float(value)
+    return value if isinstance(value, type(default)) else None
+
+
+def migrate(raw: dict) -> dict:
+    """Valid values from a settings file, possibly written by an older version or by hand.
+    Unknown keys and values of the wrong type or out of range are dropped (defaults apply)."""
+    out = {}
+    for key, default in DEFAULTS.items():
+        value = _typed(raw.get(key), default) if key in raw else None
+        if value is not None:
+            out[key] = value
+    if out.get("theme") not in (None, *THEMES):
+        del out["theme"]
+    if "zoom" in out:
+        out["zoom"] = round(min(ZOOM_RANGE[1], max(ZOOM_RANGE[0], out["zoom"])), 2)
+    if out.get("privacy_blur_level") not in (None, *BLUR_LEVELS):
+        del out["privacy_blur_level"]
+    if out.get("lock_auto_minutes", 0) < 0:
+        del out["lock_auto_minutes"]
+    if out.get("lock_enabled") and not out.get("lock_hash"):
+        out["lock_enabled"] = False  # a lock without a PIN would lock the user out
+    return out
 
 
 class Settings(QObject):
@@ -54,9 +87,7 @@ class Settings(QObject):
         except (OSError, ValueError):
             return
         if isinstance(raw, dict):
-            for key, default in DEFAULTS.items():
-                if key in raw and isinstance(raw[key], type(default)):
-                    self._data[key] = raw[key]
+            self._data.update(migrate(raw))
 
     def save(self) -> None:
         try:
@@ -84,8 +115,7 @@ class Settings(QObject):
         """Read a single value straight from the file, before QApplication exists."""
         try:
             raw = json.loads((paths.CONFIG_DIR / "settings.json").read_text(encoding="utf-8"))
-            value = raw.get(key, DEFAULTS[key])
-            return value if isinstance(value, type(DEFAULTS[key])) else DEFAULTS[key]
+            return migrate(raw).get(key, DEFAULTS[key])
         except (OSError, ValueError, AttributeError):
             return DEFAULTS[key]
 

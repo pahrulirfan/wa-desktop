@@ -1,6 +1,5 @@
 """Profile, page, permissions and downloads for WhatsApp Web in QtWebEngine."""
 
-import re
 from pathlib import Path
 
 from PySide6.QtCore import QLocale, QObject, QTimer, QUrl, Signal
@@ -9,18 +8,18 @@ from PySide6.QtWebEngineCore import (QWebEngineDownloadRequest, QWebEnginePage,
                                      QWebEnginePermission as P, QWebEngineProfile)
 from PySide6.QtWidgets import QFileDialog
 
-from . import APP_ID, paths
+from . import APP_ID, paths, platform
 from .settings import Settings
 
 INTERNAL_HOSTS = {"web.whatsapp.com", "static.whatsapp.net"}
 INTERNAL_SCHEMES = {"blob", "data", "about", "qrc", "file", "devtools", "chrome-error"}
 
 
-def build_user_agent(profile: QWebEngineProfile, custom: str = "") -> str:
+def build_user_agent(default: str, custom: str = "") -> str:
     """WhatsApp Web rejects user agents containing 'QtWebEngine'; present as plain Chrome."""
     if custom.strip():
         return custom.strip()
-    return re.sub(r"\s*QtWebEngine/[\d.]+", "", profile.httpUserAgent())
+    return platform.user_agent(default)
 
 
 def accept_language() -> str:
@@ -41,7 +40,7 @@ def make_profile(settings: Settings, parent: QObject) -> QWebEngineProfile:
     profile.setCachePath(str(paths.CACHE_DIR / "webengine"))
     profile.setPersistentCookiesPolicy(QWebEngineProfile.PersistentCookiesPolicy.ForcePersistentCookies)
     profile.setHttpCacheType(QWebEngineProfile.HttpCacheType.DiskHttpCache)
-    profile.setHttpUserAgent(build_user_agent(profile, settings["user_agent"]))
+    profile.setHttpUserAgent(build_user_agent(profile.httpUserAgent(), settings["user_agent"]))
     profile.setHttpAcceptLanguage(accept_language())
     return profile
 

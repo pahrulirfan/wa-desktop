@@ -1,22 +1,19 @@
-"""File locations, following the XDG base directory specification."""
+"""File locations: XDG on Linux, %APPDATA% / %LOCALAPPDATA% on Windows, ~/Library on macOS."""
 
-import os
 from pathlib import Path
 
-from . import APP_ID
+from . import platform
 
-
-def _xdg(var: str, fallback: str) -> Path:
-    return Path(os.environ.get(var) or Path.home() / fallback)
-
-
-CONFIG_DIR = _xdg("XDG_CONFIG_HOME", ".config") / APP_ID
-DATA_DIR = _xdg("XDG_DATA_HOME", ".local/share") / APP_ID
-CACHE_DIR = _xdg("XDG_CACHE_HOME", ".cache") / APP_ID
-AUTOSTART_FILE = _xdg("XDG_CONFIG_HOME", ".config") / "autostart" / f"{APP_ID}.desktop"
+CONFIG_DIR, DATA_DIR, CACHE_DIR = platform.app_dirs()
 
 ASSETS_DIR = Path(__file__).resolve().parent / "assets"
 ICON_SVG = ASSETS_DIR / "icon.svg"
+
+
+def use_root(root: Path) -> None:
+    """Keep everything below one folder (used by --smoke so real data is never touched)."""
+    global CONFIG_DIR, DATA_DIR, CACHE_DIR
+    CONFIG_DIR, DATA_DIR, CACHE_DIR = root / "config", root / "data", root / "cache"
 
 
 def ensure_dirs() -> None:

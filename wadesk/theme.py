@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QGuiApplication, QPalette
 
+from . import platform
+
 
 @dataclass(frozen=True)
 class Tokens:
@@ -37,9 +39,12 @@ def _gsettings(schema: str, key: str) -> str:
 
 
 def system_is_dark() -> bool:
+    """Windows and macOS report the scheme through Qt; some Linux desktops only via gsettings."""
     scheme = QGuiApplication.styleHints().colorScheme()
     if scheme != Qt.ColorScheme.Unknown:
         return scheme == Qt.ColorScheme.Dark
+    if not platform.is_linux():
+        return False
     if "dark" in _gsettings("org.gnome.desktop.interface", "color-scheme"):
         return True
     for schema in ("org.cinnamon.desktop.interface", "org.gnome.desktop.interface"):
@@ -120,12 +125,13 @@ def stylesheet(t: Tokens) -> str:
 
 
 def apply(app, mode: str) -> Tokens:
-    t = resolve(mode)
-    app.setStyle("Fusion")
-    app.setPalette(palette(t))
-    app.setStyleSheet(stylesheet(t))
+    # Set the explicit scheme first: with "system" (Unknown) Qt reports the system's own scheme again.
     hints = app.styleHints()
     if hasattr(hints, "setColorScheme"):
         hints.setColorScheme({"light": Qt.ColorScheme.Light, "dark": Qt.ColorScheme.Dark}
                              .get(mode, Qt.ColorScheme.Unknown))
+    t = resolve(mode)
+    app.setStyle("Fusion")
+    app.setPalette(palette(t))
+    app.setStyleSheet(stylesheet(t))
     return t

@@ -1,11 +1,16 @@
-"""Native desktop notifications. Clicking one opens the window and the related chat."""
+"""Native desktop notifications. Clicking one opens the window and the related chat.
 
-import shutil
+Linux uses notify-send (with a click action); Windows and macOS, or Linux without notify-send,
+use the tray icon's notification balloon / Notification Center message.
+"""
+
+import os
 from itertools import count
 
 from PySide6.QtCore import QObject, QProcess, Signal
+from PySide6.QtGui import QIcon, QPixmap
 
-from . import APP_ID, APP_NAME, paths
+from . import APP_ID, APP_NAME, paths, platform
 from .settings import Settings
 
 
@@ -18,7 +23,7 @@ class Notifier(QObject):
         self._tray = tray
         self._ids = count(1)
         self._live: dict[int, tuple] = {}  # id -> (QProcess, notification, icon file)
-        self._send = shutil.which("notify-send")
+        self.backend, self._send = platform.notifier_backend()
         self._icon_dir = paths.CACHE_DIR / "notif"
         self._icon_dir.mkdir(parents=True, exist_ok=True)
         self._app_icon = str(paths.ICON_SVG)
@@ -37,19 +42,20 @@ class Notifier(QObject):
         body = notification.message() if self._settings["notification_preview"] and not locked \
             else "New message"
         nid = next(self._ids)
-        icon_file = ""
-        image = notification.icon()
-        if not image.isNull() and not locked:
-            icon_file = str(self._icon_dir / f"{nid}.png")
-            if not image.save(icon_file, "PNG"):
-                icon_file = ""
-        self._dispatch(nid, title, body, icon_file, notification)
+        image = notification.icon() if not locked else None
+        self._dispatch(nid, title, body, image, notification)
 
     def send_test(self) -> None:
-        self._dispatch(next(self._ids), APP_NAME, "Notifications are working 🎉", "", None)
+        self._dispatch(next(self._ids), APP_NAME, "Notifications are working 🎉", None, None)
 
-    def _dispatch(self, nid: int, title: str, body: str, icon_file: str, notification) -> None:
+    def _dispatch(self, nid: int, title: str, body: str, image, notification) -> None:
+        has_image = image is not None and not image.isNull()
         if self._send:
+            icon_file = ""
+            if has_image:
+                icon_file = str(self._icon_dir / f"{nid}.png")
+                if not image.save(icon_file, "PNG"):
+                    icon_file = ""
             proc = QProcess(self)
             proc.setProgram(self._send)
             proc.setArguments([
@@ -61,8 +67,10 @@ class Notifier(QObject):
             self._live[nid] = (proc, notification, icon_file)
             proc.start()
         else:
+            # Clicking the message (Qt's messageClicked) opens the chat of the latest notification.
             self._last = notification
-            self._tray.showMessage(title, body, self._tray.icon(), 8000)
+            icon = QIcon(QPixmap.fromImage(image)) if has_image else self._tray.icon()
+            self._tray.showMessage(title, body, icon, 8000)
 
     def _finished(self, nid: int) -> None:
         entry = self._live.pop(nid, None)
@@ -79,7 +87,6 @@ class Notifier(QObject):
         proc.deleteLater()
         if icon_file:
             try:
-                import os
                 os.unlink(icon_file)
             except OSError:
                 pass
