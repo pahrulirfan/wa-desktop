@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WA Desktop</title>
+<meta name="description" content="An unofficial desktop client for WhatsApp Web on Linux, Windows and macOS, with a tray icon, native notifications, a PIN lock and a privacy blur mode.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="images/icon.png">
+<link rel="stylesheet" href="assets/style.css">
+<script>try { var t = localStorage.getItem("theme"); if (t) document.documentElement.setAttribute("data-theme", t); } catch (e) {}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="./"><img src="images/icon.png" alt="" width="30" height="30">WA Desktop</a>
+    <nav class="nav" aria-label="Main">
+      <a href="#features">Features</a>
+      <a href="#download">Download</a>
+      <a href="#install">Install</a>
+      <a href="#faq">FAQ</a>
+      <a href="about.html">About</a>
+      <a href="donate.html">Donate</a>
+      <a href="https://github.com/pahrulirfan/wa-desktop">GitHub</a>
+    </nav>
+    <button class="theme-btn" type="button" aria-label="Switch theme">&#9790;</button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <h1>WhatsApp in its own window, <span>without a browser.</span></h1>
+        <p class="lead">WA Desktop is a free, open-source desktop client for WhatsApp Web. It lives in your system
+          tray, shows native notifications, and can lock itself with a PIN or blur your chats when someone looks
+          over your shoulder.</p>
+        <ul class="badges" aria-label="Supported systems">
+          <li>Linux</li><li>Windows 10 / 11</li><li>macOS 12+</li><li>MIT licensed</li>
+        </ul>
+        <div class="buttons">
+          <a class="btn primary" href="https://github.com/pahrulirfan/wa-desktop/releases/latest">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M5 21h14"/></svg>
+            Download the latest release</a>
+          <a class="btn" href="#install">How to install</a>
+        </div>
+      </div>
+      <figure>
+        <img class="shot theme-shot-light" src="images/main-light.png" width="1252" height="868" alt="WA Desktop main window in the light theme, showing a chat list and an open conversation with fictional demo data">
+        <img class="shot theme-shot-dark" src="images/main-dark.png" width="1252" height="868" alt="WA Desktop main window in the dark theme" loading="lazy">
+      </figure>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="wrap">
+      <h2>Features</h2>
+      <p class="lead">Everything you expect from a desktop messenger, around the official WhatsApp Web client.</p>
+      <div class="grid" style="margin-top:24px">
+        <div class="card">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="4" width="18" height="14" rx="2"/><circle cx="17" cy="8" r="2.5" fill="currentColor"/></svg></div>
+          <h3>Tray icon and unread badge</h3>
+          <p>The unread count appears on the tray icon, the Windows taskbar and the macOS Dock. Closing the window
+            keeps WhatsApp running in the background.</p>
+        </div>
+        <div class="card">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21h4"/></svg></div>
+          <h3>Native notifications</h3>
+          <p>Messages arrive as system notifications. Click one to open the chat. Do Not Disturb and a
+            "hide message preview" option are one click away.</p>
+        </div>
+        <div class="card">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+          <h3>PIN lock</h3>
+          <p>Lock manually, after inactivity, when hidden or on launch. PINs are stored as a salted PBKDF2 hash,
+            with an increasing lockout after wrong attempts.</p>
+        </div>
+        <div class="card">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><path d="m4 4 16 16"/></svg></div>
+          <h3>Privacy blur</h3>
+          <p>Blur the chat list, the open conversation, or everything while the window is in the background.
+            Hover over a row to reveal it.</p>
+        </div>
+        <div class="card">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/></svg></div>
+          <h3>Light and dark themes</h3>
+          <p>Follows your system theme live, for both the app and WhatsApp Web itself, or pick one yourself.</p>
+        </div>
+        <div class="card">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 2 4 6v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6z"/></svg></div>
+          <h3>Private by design</h3>
+          <p>No telemetry and no servers of our own. The app talks only to WhatsApp, and your messages stay
+            end-to-end encrypted.</p>
+        </div>
+      </div>
+
+      <div class="grid two" style="margin-top:32px">
+        <figure class="frame">
+          <img src="images/privacy-chat-list.png" width="1252" height="868" loading="lazy" alt="The chat list is blurred; the row under the mouse pointer is readable">
+          <figcaption>Privacy blur: only the row under the pointer is readable.</figcaption>
+        </figure>
+        <figure class="frame">
+          <img src="images/lock-screen.png" width="1252" height="868" loading="lazy" alt="Lock screen asking for a PIN">
+          <figcaption>The PIN lock covers the window and disables input.</figcaption>
+        </figure>
+        <figure class="frame">
+          <img src="images/settings-overview.png" width="1056" height="952" loading="lazy" alt="Settings pages for General, Notifications, Privacy and Security">
+          <figcaption>Every option lives in one clean settings dialog.</figcaption>
+        </figure>
+        <figure class="frame">
+          <img src="images/tray-badges.png" width="890" height="190" loading="lazy" alt="Tray icon states: no messages, unread counts and Do Not Disturb">
+          <figcaption>Tray icon states: idle, unread messages, Do Not Disturb.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="download">
+    <div class="wrap">
+      <h2>Download</h2>
+      <p class="lead">All files are on the <a href="https://github.com/pahrulirfan/wa-desktop/releases/latest">latest
+        GitHub release</a>, together with a <code>SHA256SUMS.txt</code> file to verify them.</p>
+      <div class="grid" style="margin-top:24px">
+        <div class="card os">
+          <h3><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Windows</h3>
+          <ul>
+            <li>Installer: <code>WA-Desktop-&lt;version&gt;-windows-x64-setup.exe</code></li>
+            <li>No installation: <code>…-windows-x64-portable.zip</code></li>
+            <li>Windows 10 or 11, 64-bit</li>
+          </ul>
+          <a class="btn primary" href="https://github.com/pahrulirfan/wa-desktop/releases/latest">Get it for Windows</a>
+        </div>
+        <div class="card os">
+          <h3><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="4" width="16" height="11" rx="2"/><path d="M2 19h20"/></svg>macOS</h3>
+          <ul>
+            <li>Apple silicon (M1 and newer): <code>…-macos-apple-silicon.dmg</code></li>
+            <li>Intel Macs: <code>…-macos-intel.dmg</code></li>
+            <li>macOS 12 Monterey or newer</li>
+          </ul>
+          <a class="btn primary" href="https://github.com/pahrulirfan/wa-desktop/releases/latest">Get it for macOS</a>
+        </div>
+        <div class="card os">
+          <h3><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m5 8 4 4-4 4M12 17h7"/></svg>Linux</h3>
+          <ul>
+            <li>Ubuntu, Debian, Mint: <code>wadesk_&lt;version&gt;-1_amd64.deb</code></li>
+            <li>Any distribution: <code>…-linux-x86_64.AppImage</code></li>
+            <li>Or from source with <code>install.sh</code></li>
+          </ul>
+          <a class="btn primary" href="https://github.com/pahrulirfan/wa-desktop/releases/latest">Get it for Linux</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <h2>Install</h2>
+      <p class="lead">The packages are not signed with a paid certificate, so Windows and macOS show a warning the
+        first time. Here is how to open them.</p>
+      <div class="tabs" role="tablist" aria-label="Operating system">
+        <button type="button" role="tab" id="tab-linux" aria-controls="install-linux" aria-selected="true">Linux</button>
+        <button type="button" role="tab" id="tab-windows" aria-controls="install-windows" aria-selected="false" tabindex="-1">Windows</button>
+        <button type="button" role="tab" id="tab-macos" aria-controls="install-macos" aria-selected="false" tabindex="-1">macOS</button>
+      </div>
+
+      <div class="panel card" role="tabpanel" id="install-linux" aria-labelledby="tab-linux">
+        <h3>Ubuntu, Debian, Linux Mint (.deb)</h3>
+        <pre><code>sudo apt install ./wadesk_*_amd64.deb</code></pre>
+        <p>Then open <strong>WA Desktop</strong> from the application menu, or run <code>wadesk</code>. Works on
+          Ubuntu 22.04 and newer, Debian 12 and newer and Linux Mint 21 and newer. To remove it:
+          <code>sudo apt remove wadesk</code>.</p>
+        <h3 style="margin-top:20px">Other distributions (AppImage)</h3>
+        <pre><code>chmod +x WA-Desktop-*-linux-x86_64.AppImage
+./WA-Desktop-*-linux-x86_64.AppImage</code></pre>
+        <h3 style="margin-top:20px">From source</h3>
+        <pre><code>git clone https://github.com/pahrulirfan/wa-desktop.git
+cd wa-desktop
+./install.sh</code></pre>
+        <p>The installer works for your user only and asks before installing system libraries with <code>apt</code>.
+          See the <a href="https://github.com/pahrulirfan/wa-desktop#installation">README</a> for Fedora, Arch and
+          other options.</p>
+      </div>
+
+      <div class="panel card" role="tabpanel" id="install-windows" aria-labelledby="tab-windows" hidden>
+        <ol>
+          <li>Download <code>WA-Desktop-&lt;version&gt;-windows-x64-setup.exe</code> and run it.</li>
+          <li>If Windows SmartScreen says <em>"Windows protected your PC"</em>, click <strong>More info</strong>, then
+            <strong>Run anyway</strong>.</li>
+          <li>The installer needs no administrator rights and adds a Start menu entry (a desktop icon is optional).
+            Uninstall it from <em>Settings → Apps</em>.</li>
+        </ol>
+        <p><strong>Portable version:</strong> extract the <code>.zip</code> anywhere and start
+          <code>WA Desktop.exe</code>. Your login and settings are still stored in
+          <code>%APPDATA%\WA Desktop</code> and <code>%LOCALAPPDATA%\WA Desktop</code>.</p>
+      </div>
+
+      <div class="panel card" role="tabpanel" id="install-macos" aria-labelledby="tab-macos" hidden>
+        <ol>
+          <li>Download the <code>.dmg</code> for your Mac (Apple silicon or Intel), open it and drag
+            <strong>WA Desktop</strong> to <strong>Applications</strong>.</li>
+          <li>The first time, <strong>right-click</strong> (or Control-click) the app in Applications and choose
+            <strong>Open</strong>, then <strong>Open</strong> again. On macOS 15 and newer, if that is not offered, open
+            <em>System Settings → Privacy &amp; Security</em> and click <strong>Open Anyway</strong>.</li>
+          <li>Or remove the quarantine flag in Terminal:
+            <pre><code>xattr -dr com.apple.quarantine "/Applications/WA Desktop.app"</code></pre></li>
+        </ol>
+        <p>Allow the microphone and camera when WhatsApp asks for them (voice messages, calls), and allow
+          notifications for WA Desktop in <em>System Settings → Notifications</em>.</p>
+      </div>
+
+      <div class="note">
+        <strong>Turn on notifications inside WhatsApp too.</strong>
+        After linking your phone, open <em>Settings → Notifications</em> in the WhatsApp interface and switch on
+        <em>Messages</em>. WhatsApp keeps that switch separate from the system permission.
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="wrap">
+      <h2>FAQ</h2>
+      <details>
+        <summary>Is this an official WhatsApp app?</summary>
+        <p>No. WA Desktop is an independent, community project and is not affiliated with WhatsApp LLC or Meta. It
+          loads the official WhatsApp Web client in its own window and uses no unofficial messaging API.</p>
+      </details>
+      <details>
+        <summary>Can WA Desktop read my messages?</summary>
+        <p>No. The app has no server and no telemetry. WhatsApp Web runs inside the app exactly as it does in a
+          browser, so your messages stay end-to-end encrypted between you and your contacts.</p>
+      </details>
+      <details>
+        <summary>Why does Windows or macOS warn me about the download?</summary>
+        <p>Code-signing certificates cost money every year, and this is a free hobby project. The packages are built
+          from the public source code by GitHub Actions, and the release lists their SHA-256 checksums. See
+          <a href="#install">Install</a> for how to open them.</p>
+      </details>
+      <details>
+        <summary>I hear the notification sound, but no notification appears.</summary>
+        <p>Open <em>Settings → Notifications</em> inside WhatsApp and turn on <em>Messages</em> (and Groups or Status
+          if you like). Then use <em>Settings → Notifications → Send test</em> in WA Desktop. If the test appears,
+          the app side works. WhatsApp also stays silent while the chat is open in the focused window. On macOS,
+          also check <em>System Settings → Notifications → WA Desktop</em>.</p>
+      </details>
+      <details>
+        <summary>Do voice messages and calls work?</summary>
+        <p>Voice messages and the camera work once you allow access. Voice and video calls depend on what WhatsApp
+          Web offers in your region and account; WA Desktop does not add or remove anything.</p>
+      </details>
+      <details>
+        <summary>How do I update?</summary>
+        <p>Download the new release and install it over the old one; your login and settings are kept. With
+          <code>install.sh</code>, pull the latest source and run it again.</p>
+      </details>
+      <details>
+        <summary>Where are my data and settings stored?</summary>
+        <p>Linux: <code>~/.config/wadesk</code>, <code>~/.local/share/wadesk</code> and <code>~/.cache/wadesk</code>.
+          Windows: <code>%APPDATA%\WA Desktop</code> and <code>%LOCALAPPDATA%\WA Desktop</code>. macOS:
+          <code>~/Library/Application Support/WA Desktop</code> and <code>~/Library/Caches/WA Desktop</code>.</p>
+      </details>
+      <details>
+        <summary>Can I use two WhatsApp accounts?</summary>
+        <p>Not yet; the app runs one session at a time.</p>
+      </details>
+    </div>
+  </section>
+
+  <section id="privacy">
+    <div class="wrap">
+      <h2>Privacy</h2>
+      <ul class="checklist">
+        <li>No analytics, no telemetry, no crash reporting, and no network calls to anyone except WhatsApp.</li>
+        <li>Your session is stored only on your computer, in the folders listed above. <em>Settings → Advanced → Log
+          out</em> deletes it.</li>
+        <li>The PIN lock is a convenience lock, not encryption: protect your user account and disk if you need
+          stronger guarantees.</li>
+        <li>Privacy blur is cosmetic and depends on the layout of WhatsApp Web, which can change.</li>
+        <li>The complete source code is public under the MIT License.</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <nav aria-label="Footer">
+      <a href="./">Home</a>
+      <a href="about.html">About</a>
+      <a href="donate.html">Donate</a>
+      <a href="https://github.com/pahrulirfan/wa-desktop">Source code</a>
+      <a href="https://github.com/pahrulirfan/wa-desktop/issues">Report a bug</a>
+      <a href="https://github.com/pahrulirfan/wa-desktop/blob/main/LICENSE">MIT License</a>
+    </nav>
+    <p>WA Desktop is unofficial, not affiliated with WhatsApp LLC or Meta. WhatsApp is a trademark of WhatsApp LLC.</p>
+  </div>
+</footer>
+<script src="assets/site.js"></script>
+</body>
+</html>
