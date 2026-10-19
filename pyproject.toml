@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wadesk"
+dynamic = ["version", "dependencies"]
+description = "Unofficial desktop client for WhatsApp Web (Linux, Windows, macOS), built with PySide6"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Pahrul Irfan" }]
+requires-python = ">=3.10"
+keywords = ["whatsapp", "desktop", "pyside6", "qt-webengine", "tray"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: X11 Applications :: Qt",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Topic :: Communications :: Chat",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+build = ["pyinstaller>=6.10"]
+
+[project.scripts]
+wadesk = "wadesk.app:main"
+
+[project.urls]
+Homepage = "https://pahrulirfan.github.io/wa-desktop/"
+Source = "https://github.com/pahrulirfan/wa-desktop"
+Issues = "https://github.com/pahrulirfan/wa-desktop/issues"
+
+[tool.setuptools]
+packages = ["wadesk"]
+
+[tool.setuptools.package-data]
+wadesk = ["assets/*"]
+
+[tool.setuptools.dynamic]
+version = { attr = "wadesk.__version__" }
+dependencies = { file = ["requirements.txt"] }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

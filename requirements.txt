@@ -1,4 +1,4 @@
-# Sejak 6.12 Qt WebEngine dipisah ke paket tersendiri.
+# Since 6.12, Qt WebEngine ships as a separate wheel.
 PySide6-Essentials>=6.12
 PySide6-Addons>=6.12
 PySide6-WebEngine>=6.12

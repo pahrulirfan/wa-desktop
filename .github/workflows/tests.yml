@@ -1,0 +1,85 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.os }} · Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, python: "3.10" }
+          - { os: ubuntu-latest, python: "3.12" }
+          - { os: windows-latest, python: "3.12" }
+          - { os: macos-latest, python: "3.12" }
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            pyproject.toml
+
+      - name: Use a throw-away home folder
+        # Nothing may read or write the runner's real configuration.
+        run: |
+          home="$RUNNER_TEMP/home"
+          mkdir -p "$home" "$RUNNER_TEMP/logs"
+          {
+            echo "HOME=$home"
+            echo "USERPROFILE=$home"
+            echo "APPDATA=$home/AppData/Roaming"
+            echo "LOCALAPPDATA=$home/AppData/Local"
+            echo "XDG_CONFIG_HOME=$home/.config"
+            echo "XDG_DATA_HOME=$home/.local/share"
+            echo "XDG_CACHE_HOME=$home/.cache"
+          } >> "$GITHUB_ENV"
+
+      - name: Install with install.sh (system libraries via apt)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb xauth
+          ./install.sh --yes 2>&1 | tee "$RUNNER_TEMP/logs/install.log"
+
+      - name: Install the package with test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Unit tests
+        run: python -m pytest -v 2>&1 | tee "$RUNNER_TEMP/logs/pytest.log"
+
+      - name: Smoke test from source
+        timeout-minutes: 5
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then run="xvfb-run -a -s '-screen 0 1280x800x24'"; else run=""; fi
+          eval "$run python -m wadesk --smoke" 2>&1 | tee "$RUNNER_TEMP/logs/smoke-source.log"
+
+      - name: Smoke test of the install.sh launcher
+        if: runner.os == 'Linux'
+        timeout-minutes: 5
+        run: xvfb-run -a "$HOME/.local/bin/wadesk" --smoke 2>&1 | tee "$RUNNER_TEMP/logs/smoke-installed.log"
+
+      - name: Report failure details
+        if: failure()
+        run: .github/report-failure.sh
