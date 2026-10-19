@@ -1,0 +1,10 @@
+# Lets Qt WebEngine (Chromium) use user namespaces for its sandbox on Ubuntu 24.04 and newer.
+# Installed by the wadesk .deb only where AppArmor 4 is available.
+abi <abi/4.0>,
+include <tunables/global>
+
+profile wadesk /opt/wadesk/{wadesk,_internal/PySide6/Qt/libexec/QtWebEngineProcess} flags=(unconfined) {
+  userns,
+
+  include if exists <local/wadesk>
+}

@@ -1,0 +1,296 @@
+name: Release
+
+# A pushed tag vX.Y.Z builds every package, tests it and publishes a GitHub Release.
+# "Run workflow" (workflow_dispatch) builds and tests the same packages as artifacts only.
+on:
+  push:
+    tags: ["v*"]
+    branches: [cross-platform]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.12"
+  PYINSTALLER_VERSION: "6.22.3"
+
+jobs:
+  version:
+    name: Check version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        name: Compare the tag with wadesk/__init__.py
+        run: |
+          version="$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' wadesk/__init__.py)"
+          [ -n "$version" ] || { echo "::error::__version__ not found in wadesk/__init__.py"; exit 1; }
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            tag="${GITHUB_REF_NAME#v}"
+            if [ "$tag" != "$version" ]; then
+              echo "::error::Tag $GITHUB_REF_NAME does not match __version__ = \"$version\" in wadesk/__init__.py"
+              exit 1
+            fi
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Building WA Desktop $version"
+
+  windows:
+    name: Windows (installer + portable)
+    needs: version
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Install build tools
+        run: |
+          mkdir -p "$RUNNER_TEMP/logs" packages
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt "pyinstaller==$PYINSTALLER_VERSION"
+      - name: Build with PyInstaller
+        run: python -m PyInstaller --noconfirm packaging/wadesk.spec 2>&1 | tee "$RUNNER_TEMP/logs/pyinstaller.log"
+      - name: Check the Qt WebEngine runtime
+        run: python packaging/check_bundle.py "dist/WA Desktop"
+      - name: Smoke test the build
+        shell: pwsh
+        timeout-minutes: 5
+        run: |
+          $p = Start-Process -FilePath "dist\WA Desktop\WA Desktop.exe" -ArgumentList "--smoke" -PassThru
+          $null = $p.Handle
+          if (-not $p.WaitForExit(240000)) { $p.Kill(); throw "smoke test timed out" }
+          if ($p.ExitCode -ne 0) { throw "smoke test failed with exit code $($p.ExitCode)" }
+          "smoke test passed"
+      - name: Install Inno Setup if missing
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup -y --no-progress
+          }
+      - name: Build the installer
+        shell: pwsh
+        run: |
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /Q "/DAppVersion=$env:VERSION" `
+            "/DSourceDir=$PWD\dist\WA Desktop" "/DOutputDir=$PWD\packages" packaging\windows\wadesk.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed" }
+      - name: Test the installer (install, smoke test, uninstall)
+        shell: pwsh
+        timeout-minutes: 10
+        run: |
+          $setup = Get-ChildItem packages\*-setup.exe | Select-Object -First 1
+          $dir = "$env:RUNNER_TEMP\wa-install"
+          $p = Start-Process $setup.FullName -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/CURRENTUSER", "/NORESTART", "/DIR=`"$dir`"" -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "setup failed with exit code $($p.ExitCode)" }
+          $p = Start-Process "$dir\WA Desktop.exe" -ArgumentList "--smoke" -PassThru
+          $null = $p.Handle
+          if (-not $p.WaitForExit(240000)) { $p.Kill(); throw "installed app: smoke test timed out" }
+          if ($p.ExitCode -ne 0) { throw "installed app: smoke test failed with exit code $($p.ExitCode)" }
+          $p = Start-Process "$dir\unins000.exe" -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "uninstall failed with exit code $($p.ExitCode)" }
+          Start-Sleep -Seconds 5
+          if (Test-Path "$dir\WA Desktop.exe") { throw "uninstaller left the app behind" }
+          "installer test passed"
+      - name: Build the portable zip
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "dist\WA Desktop" -DestinationPath "packages\WA-Desktop-$env:VERSION-windows-x64-portable.zip" -CompressionLevel Optimal
+          Get-ChildItem packages
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-windows
+          path: packages/*
+          if-no-files-found: error
+      - name: Report failure details
+        if: failure()
+        run: .github/report-failure.sh
+
+  macos:
+    name: macOS ${{ matrix.arch }}
+    needs: version
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    # The Intel build is best effort: the runner image may go away; it must not block a release.
+    continue-on-error: ${{ matrix.optional }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: macos-latest, arch: apple-silicon, optional: false }
+          - { runner: macos-15-intel, arch: intel, optional: true }
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      APP: dist/WA Desktop.app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Install build tools
+        run: |
+          mkdir -p "$RUNNER_TEMP/logs" packages
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt "pyinstaller==$PYINSTALLER_VERSION"
+      - name: Build with PyInstaller
+        run: python -m PyInstaller --noconfirm packaging/wadesk.spec 2>&1 | tee "$RUNNER_TEMP/logs/pyinstaller.log"
+      - name: Check the Qt WebEngine runtime and Info.plist
+        run: |
+          python packaging/check_bundle.py "$APP"
+          plutil -extract NSMicrophoneUsageDescription raw "$APP/Contents/Info.plist"
+          plutil -extract NSCameraUsageDescription raw "$APP/Contents/Info.plist"
+          test "$(plutil -extract CFBundleShortVersionString raw "$APP/Contents/Info.plist")" = "$VERSION"
+      - name: Ad-hoc sign the bundle
+        # Unsigned arm64 code does not run at all; an ad-hoc signature is enough to start.
+        run: |
+          codesign --force --deep -s - "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+      - name: Smoke test the build
+        timeout-minutes: 5
+        run: '"$APP/Contents/MacOS/WA Desktop" --smoke 2>&1 | tee "$RUNNER_TEMP/logs/smoke.log"'
+      - name: Build the disk image
+        run: |
+          dmg="packages/WA-Desktop-$VERSION-macos-${{ matrix.arch }}.dmg"
+          root="$RUNNER_TEMP/dmg"
+          mkdir -p "$root"
+          cp -R "$APP" "$root/"
+          ln -s /Applications "$root/Applications"
+          # hdiutil sometimes fails with "Resource busy" on CI machines; retry.
+          for attempt in 1 2 3 4 5; do
+            if hdiutil create -volname "WA Desktop" -srcfolder "$root" -fs HFS+ -format UDZO -ov "$dmg"; then
+              break
+            fi
+            [ "$attempt" = 5 ] && exit 1
+            echo "hdiutil failed (attempt $attempt), retrying"
+            sleep $((attempt * 10))
+          done
+          hdiutil verify "$dmg"
+          ls -la packages
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-macos-${{ matrix.arch }}
+          path: packages/*
+          if-no-files-found: error
+      - name: Report failure details
+        if: failure()
+        run: .github/report-failure.sh
+
+  linux:
+    name: Linux (.deb + AppImage)
+    needs: version
+    # Built on the oldest supported Ubuntu so the package also runs on newer ones.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Install system libraries and build tools
+        run: |
+          mkdir -p "$RUNNER_TEMP/logs" packages
+          sudo apt-get update -qq
+          # The same Qt WebEngine runtime libraries install.sh installs, plus Xvfb for the smoke test.
+          sudo apt-get install -y -qq libxcb-cursor0 libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 \
+            libxcb-keysyms1 libxcb-render-util0 libxcb-shape0 libnss3 libxkbfile1 libxcomposite1 \
+            libxdamage1 libxtst6 libegl1 libgl1 libasound2 libnotify-bin xvfb xauth
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt "pyinstaller==$PYINSTALLER_VERSION"
+      - name: Build with PyInstaller
+        run: python -m PyInstaller --noconfirm packaging/wadesk.spec 2>&1 | tee "$RUNNER_TEMP/logs/pyinstaller.log"
+      - name: Check the Qt WebEngine runtime
+        run: python packaging/check_bundle.py dist/wadesk
+      - name: Smoke test the build
+        timeout-minutes: 5
+        run: xvfb-run -a dist/wadesk/wadesk --smoke 2>&1 | tee "$RUNNER_TEMP/logs/smoke.log"
+      - name: Build the .deb
+        run: packaging/linux/build-deb.sh "$VERSION" dist/wadesk packages
+      - name: Build the AppImage
+        id: appimage
+        continue-on-error: true
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/appimagetool" \
+            https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x "$RUNNER_TEMP/appimagetool"
+          APPIMAGE_EXTRACT_AND_RUN=1 packaging/linux/build-appimage.sh "$VERSION" dist/wadesk packages "$RUNNER_TEMP/appimagetool"
+          APPIMAGE_EXTRACT_AND_RUN=1 xvfb-run -a packages/*.AppImage --smoke
+      - name: Drop a broken AppImage
+        if: steps.appimage.outcome != 'success'
+        run: rm -f packages/*.AppImage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-linux
+          path: packages/*
+          if-no-files-found: error
+      - name: Report failure details
+        if: failure()
+        run: .github/report-failure.sh
+
+  deb-test:
+    name: Install the .deb on ${{ matrix.image }}
+    needs: linux
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ["ubuntu:22.04", "ubuntu:24.04"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: packages-linux
+          path: packages
+      - name: apt install + smoke test + remove
+        run: bash packaging/linux/test-deb.sh packages/*.deb
+
+  publish:
+    name: Publish the GitHub Release
+    needs: [version, windows, macos, linux, deb-test]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*
+          path: packages
+          merge-multiple: true
+      - name: Checksums
+        run: |
+          cd packages
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<'NOTES'
+          Downloads for Linux (`.deb`, AppImage), Windows (installer or portable zip) and macOS (Apple silicon and Intel).
+
+          The packages are not signed with a paid certificate, so Windows SmartScreen and macOS Gatekeeper warn on the first start. See [How to open the unsigned packages](https://github.com/pahrulirfan/wa-desktop#opening-the-unsigned-packages).
+          NOTES
+          gh release create "$GITHUB_REF_NAME" packages/* --repo "$GITHUB_REPOSITORY" \
+            --title "WA Desktop ${GITHUB_REF_NAME#v}" --notes-file notes.md --generate-notes

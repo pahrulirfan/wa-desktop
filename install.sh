@@ -130,7 +130,7 @@ LAUNCHER
 chmod +x "$BIN_DIR/$APP_ID"
 
 cp "$SRC/$APP_ID/assets/icon.svg" "$ICON_DIR/$APP_ID.svg"
-sed "s|@EXEC@|$BIN_DIR/$APP_ID|" "$SRC/packaging/$APP_ID.desktop" > "$APPS_DIR/$APP_ID.desktop"
+sed "s|@EXEC@|$BIN_DIR/$APP_ID|" "$SRC/packaging/linux/$APP_ID.desktop" > "$APPS_DIR/$APP_ID.desktop"
 chmod +x "$APPS_DIR/$APP_ID.desktop"
 
 command -v update-desktop-database >/dev/null && update-desktop-database "$APPS_DIR" 2>/dev/null || true

@@ -1,0 +1,12 @@
+#!/bin/sh
+set -e
+if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+    if [ -e /etc/apparmor.d/wadesk ]; then
+        if command -v apparmor_parser >/dev/null 2>&1 && [ -d /sys/kernel/security/apparmor ]; then
+            apparmor_parser -R /etc/apparmor.d/wadesk 2>/dev/null || true
+        fi
+        rm -f /etc/apparmor.d/wadesk
+    fi
+    command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database -q /usr/share/applications || true
+fi
+exit 0

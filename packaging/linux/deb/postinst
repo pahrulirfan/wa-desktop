@@ -1,0 +1,15 @@
+#!/bin/sh
+# Ubuntu 24.04+ only allows programs with an AppArmor profile to create the user namespaces that
+# Chromium's sandbox (used by Qt WebEngine) needs. Install the profile where AppArmor 4 exists.
+set -e
+if [ "$1" = "configure" ]; then
+    if [ -e /etc/apparmor.d/abi/4.0 ]; then
+        cp /opt/wadesk/apparmor-profile /etc/apparmor.d/wadesk
+        if command -v apparmor_parser >/dev/null 2>&1 && [ -d /sys/kernel/security/apparmor ]; then
+            apparmor_parser -r -T -W /etc/apparmor.d/wadesk || true
+        fi
+    fi
+    command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database -q /usr/share/applications || true
+    command -v gtk-update-icon-cache >/dev/null 2>&1 && gtk-update-icon-cache -q -t /usr/share/icons/hicolor || true
+fi
+exit 0
