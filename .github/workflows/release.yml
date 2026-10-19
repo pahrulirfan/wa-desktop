@@ -5,7 +5,6 @@ name: Release
 on:
   push:
     tags: ["v*"]
-    branches: [cross-platform]
   workflow_dispatch:
 
 permissions:
