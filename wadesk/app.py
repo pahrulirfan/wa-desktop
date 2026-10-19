@@ -227,6 +227,8 @@ class Application(QObject):
             self.tray.showMessage(APP_NAME, f"Download complete: {name}", self.tray.icon(), 4000)
 
     def quit(self) -> None:
+        if self.window._quitting:
+            return
         self.window.quit_for_real()
         self.app.quit()
 
@@ -311,11 +313,12 @@ def main(argv: list[str] | None = None) -> int:
     if _already_running():
         return 0
 
-    controller = Application(app, args.minimized)  # noqa: F841 (keeps a reference alive)
+    controller = Application(app, args.minimized)
 
     # Wake the interpreter periodically so that Ctrl+C in a terminal works.
-    signal.signal(signal.SIGINT, lambda *_: app.quit())
-    signal.signal(signal.SIGTERM, lambda *_: app.quit())
+    # Quit the same way as the Quit menu item, from the event loop rather than the signal handler.
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        signal.signal(sig, lambda *_: QTimer.singleShot(0, controller.quit))
     tick = QTimer()
     tick.start(500)
     tick.timeout.connect(lambda: None)

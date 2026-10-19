@@ -359,7 +359,8 @@ class MainWindow(QMainWindow):
                                       self.tray.icon(), 5000)
             return
         event.accept()
-        self.quit_requested.emit()
+        if not self._quitting:  # closed while the app is quitting: don't start a second quit
+            self.quit_requested.emit()
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
