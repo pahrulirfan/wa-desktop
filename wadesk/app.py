@@ -4,14 +4,17 @@ import argparse
 import os
 import signal
 import sys
+import tempfile
+import time
+from pathlib import Path
 
-from PySide6.QtCore import QCoreApplication, QObject, Qt, QTimer, QUrl
-from PySide6.QtGui import QDesktopServices, QGuiApplication, QIcon
+from PySide6.QtCore import QCoreApplication, QEvent, QObject, Qt, QTimer, QUrl
+from PySide6.QtGui import QDesktopServices, QIcon
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWebEngineCore import QWebEngineSettings
 from PySide6.QtWidgets import QApplication, QMenu
 
-from . import APP_ID, APP_NAME, __version__, autostart, paths, theme
+from . import APP_ID, APP_NAME, __version__, autostart, paths, platform, theme
 from .dialogs import SettingsDialog, show_about
 from .lock import confirm_forgot
 from .notifier import Notifier
@@ -21,13 +24,29 @@ from .tray import Tray, base_pixmap
 from .webpage import DownloadManager, WaPage, make_profile
 from .window import MainWindow
 
-SOCKET_NAME = f"{APP_ID}-{os.getuid()}"
+SOCKET_NAME = platform.socket_name()
+
+
+class QtApp(QApplication):
+    """Marks the window as quitting before Qt closes it for a system quit request (macOS Dock
+    "Quit", logout, SIGTERM), so that close-to-tray does not cancel the quit. Overriding event()
+    only sees events sent to the application object itself, unlike an application-wide filter."""
+
+    before_quit = None
+
+    def event(self, e) -> bool:
+        if e.type() == QEvent.Quit and self.before_quit is not None:
+            self.before_quit()
+        return super().event(e)
 
 
 class Application(QObject):
-    def __init__(self, app: QApplication, minimized: bool):
+    def __init__(self, app: QtApp, minimized: bool, smoke: bool = False):
         super().__init__(app)
         self.app = app
+        self.socket_name = f"{SOCKET_NAME}-smoke-{os.getpid()}" if smoke else SOCKET_NAME
+        self._started = time.monotonic()
+        self._minimized = minimized
         self.settings = Settings()
         self.tokens = theme.apply(app, self.settings["theme"])
 
@@ -53,6 +72,8 @@ class Application(QObject):
         self._build_tray_menu()
         self._wire()
         self._start_server()
+        if self.settings["autostart"] and not smoke:
+            self._sync_autostart()  # the app may have moved since the entry was written
 
         if self.window.lock_available() and self.settings["lock_on_start"]:
             self.window.lock()
@@ -61,7 +82,8 @@ class Application(QObject):
             self.tray.show()
         if not (minimized or self.settings["start_minimized"]) or not self.tray.isVisible():
             self.window.show()
-        self.window.start()
+        if not smoke:
+            self.window.start()
 
     # ---------- tray ----------
     def _build_tray_menu(self) -> None:
@@ -83,6 +105,8 @@ class Application(QObject):
 
     def _tray_activated(self, reason) -> None:
         from PySide6.QtWidgets import QSystemTrayIcon as T
+        if platform.is_macos():
+            return  # a click on a menu bar icon opens its menu, which has "Open WA Desktop"
         if reason in (T.Trigger, T.DoubleClick):
             self.window.toggle_visibility()
         elif reason == T.MiddleClick:
@@ -100,6 +124,12 @@ class Application(QObject):
         w.forgot_pin_requested.connect(self.forgot_pin)
         self.settings.changed.connect(self._setting_changed)
         self.app.aboutToQuit.connect(self._cleanup)
+        self.app.before_quit = self.window.quit_for_real
+        # Follow the system's light/dark switch live (deferred: applying a theme touches the hints).
+        self.app.styleHints().colorSchemeChanged.connect(
+            lambda *_: QTimer.singleShot(0, self._follow_system_theme))
+        if platform.is_macos():
+            self.app.applicationStateChanged.connect(self._app_state_changed)
 
     def _unread(self, n: int) -> None:
         w_icon = self.tray.refresh(unread=n)
@@ -113,16 +143,38 @@ class Application(QObject):
             self.tray_dnd.blockSignals(False)
             self.window.setWindowIcon(self.tray.refresh(dnd=self.settings["dnd"]))
         elif key == "theme":
-            self.tokens = theme.apply(self.app, self.settings["theme"])
-            self.window.overlay.apply_tokens(self.tokens)
-            self.window.lock_screen.apply_tokens(self.tokens)
-            # Chromium only re-reads the preferred colour scheme when its web preferences are
-            # refreshed; touching any attribute does that, so the page follows the new theme live.
-            self.page.settings().setAttribute(QWebEngineSettings.WebAttribute.ForceDarkMode, False)
+            self._apply_theme()
         elif key == "autostart":
-            autostart.set_enabled(self.settings["autostart"])
+            self._sync_autostart()
         elif key in ("lock_enabled", "lock_hash"):
             self.tray_lock.setVisible(self.window.lock_available())
+
+    def _apply_theme(self) -> None:
+        self.tokens = theme.apply(self.app, self.settings["theme"])
+        self.window.overlay.apply_tokens(self.tokens)
+        self.window.lock_screen.apply_tokens(self.tokens)
+        # Chromium only re-reads the preferred colour scheme when its web preferences are
+        # refreshed; touching any attribute does that, so the page follows the new theme live.
+        self.page.settings().setAttribute(QWebEngineSettings.WebAttribute.ForceDarkMode, False)
+
+    def _follow_system_theme(self) -> None:
+        if self.settings["theme"] == "system" and theme.resolve("system") != self.tokens:
+            self._apply_theme()
+
+    def _sync_autostart(self) -> None:
+        try:
+            autostart.set_enabled(self.settings["autostart"])
+        except OSError as e:
+            self.window.toast.popup(f"Could not change launch at login: {e}", msecs=5000)
+
+    def _app_state_changed(self, state) -> None:
+        # macOS: clicking the Dock icon re-activates the app; bring the hidden window back.
+        # Right after a hidden start (e.g. at login) the activation is not a click, so skip it.
+        if state != Qt.ApplicationActive or self.window.isVisible():
+            return
+        if self._minimized and time.monotonic() - self._started < 3:
+            return
+        self.window.show_and_raise()
 
     # ---------- actions ----------
     def open_settings(self) -> None:
@@ -189,8 +241,9 @@ class Application(QObject):
     # ---------- single instance ----------
     def _start_server(self) -> None:
         self.server = QLocalServer(self)
-        QLocalServer.removeServer(SOCKET_NAME)
-        self.server.listen(SOCKET_NAME)
+        self.server.setSocketOptions(QLocalServer.UserAccessOption)
+        QLocalServer.removeServer(self.socket_name)
+        self.server.listen(self.socket_name)
         self.server.newConnection.connect(self._on_connection)
 
     def _on_connection(self) -> None:
@@ -204,6 +257,7 @@ def _already_running() -> bool:
     sock = QLocalSocket()
     sock.connectToServer(SOCKET_NAME)
     if sock.waitForConnected(300):
+        platform.allow_foreground_handoff()
         sock.write(b"show")
         sock.waitForBytesWritten(300)
         sock.disconnectFromServer()
@@ -212,27 +266,47 @@ def _already_running() -> bool:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="wadesk", description=f"{APP_NAME} — WhatsApp client for Linux")
-    parser.add_argument("--minimized", action="store_true", help="start hidden in the system tray")
+    parser = argparse.ArgumentParser(prog="wadesk", description=f"{APP_NAME} — WhatsApp desktop client")
+    parser.add_argument("--minimized", action="store_true",
+                        help=f"start hidden in the {platform.tray_place()}")
+    parser.add_argument("--smoke", action="store_true",
+                        help="self-test: open the window with a local page, then exit (0 = passed)")
     parser.add_argument("--version", action="version", version=f"{APP_NAME} {__version__}")
     args, qt_args = parser.parse_known_args(argv if argv is not None else sys.argv[1:])
 
+    platform.restore_library_path()
+    policy = platform.root_policy()
+    if policy == "refuse":
+        print(f"Please run {APP_NAME} as a normal user, not as root.", file=sys.stderr)
+        return 1
+
+    smoke_dir = None
+    if args.smoke:  # never touch the real settings and session
+        smoke_dir = tempfile.TemporaryDirectory(prefix="wadesk-smoke-", ignore_cleanup_errors=True)
+        paths.use_root(Path(smoke_dir.name))
     paths.ensure_dirs()
     flags = os.environ.get("QTWEBENGINE_CHROMIUM_FLAGS", "")
     if Settings.peek("disable_gpu"):
         flags += " --disable-gpu"
-    if os.geteuid() == 0:
+    if policy == "no-sandbox":
         flags += " --no-sandbox"
     os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = flags.strip()
 
+    platform.set_app_user_model_id()
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
-    app = QApplication([sys.argv[0], *qt_args])
+    app = QtApp([sys.argv[0], *qt_args])
     app.setApplicationName(APP_ID)
     app.setApplicationDisplayName(APP_NAME)
     app.setApplicationVersion(__version__)
     app.setDesktopFileName(APP_ID)
     app.setQuitOnLastWindowClosed(False)
     app.setWindowIcon(QIcon(base_pixmap(256)))
+
+    if args.smoke:
+        from .smoke import run
+        code = run(app, lambda: Application(app, minimized=False, smoke=True))
+        smoke_dir.cleanup()
+        return code
 
     if _already_running():
         return 0

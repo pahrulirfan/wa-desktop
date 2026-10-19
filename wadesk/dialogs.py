@@ -1,16 +1,20 @@
 """Settings dialog (sidebar + pages) and the About box."""
 
-from PySide6.QtCore import QSize, Qt, Signal
-from PySide6.QtGui import QDesktopServices
-from PySide6.QtCore import QUrl
+from PySide6.QtCore import QSize, Qt, QUrl, Signal
+from PySide6.QtGui import QDesktopServices, QKeySequence
 from PySide6.QtWidgets import (QComboBox, QDialog, QFileDialog, QFrame, QHBoxLayout, QLabel,
                                QLineEdit, QListWidget, QMessageBox, QPushButton, QScrollArea,
                                QSlider, QStackedWidget, QVBoxLayout, QWidget)
 
-from . import APP_NAME, __version__, paths
+from . import APP_NAME, __version__, paths, platform
 from .lock import check_new_pin, hash_pin, request_pins, verify_pin
 from .tray import base_pixmap
 from .widgets import ToggleSwitch
+
+
+def keys(shortcut: str) -> str:
+    """A shortcut as this OS writes it: "Ctrl+L" stays on Linux/Windows, becomes ⌘L on macOS."""
+    return QKeySequence(shortcut).toString(QKeySequence.NativeText)
 
 
 class Row(QFrame):
@@ -113,10 +117,12 @@ class SettingsDialog(QDialog):
 
     # --- pages ---
     def _general(self):
+        place = platform.tray_place()
         return [
-            Row("Close to tray", "The ✕ button only hides the window; WhatsApp keeps receiving "
-                "messages in the background.", self._toggle("close_to_tray")),
-            Row("Start hidden", "On launch, go straight to the tray without showing the "
+            Row("Keep running when closed" if platform.is_macos() else "Close to tray",
+                "Closing the window only hides it; WhatsApp keeps receiving messages in the "
+                "background.", self._toggle("close_to_tray")),
+            Row("Start hidden", f"On launch, go straight to the {place} without showing the "
                 "window.", self._toggle("start_minimized")),
             Row("Launch at login", "Start automatically when you log in to your desktop.",
                 self._toggle("autostart", self.autostart_changed.emit)),
@@ -128,7 +134,7 @@ class SettingsDialog(QDialog):
                 self._toggle("notifications")),
             Row("Show message preview", "When off, notifications only say \"New message\" "
                 "without the sender or text.", self._toggle("notification_preview")),
-            Row("Do Not Disturb", "Silence all notifications for now (Ctrl+Shift+D).",
+            Row("Do Not Disturb", f"Silence all notifications for now ({keys('Ctrl+Shift+D')}).",
                 self._toggle("dnd")),
             Row("Test notification", "Send a test notification to make sure everything works.",
                 self._button("Send test", self.test_notification.emit)),
@@ -155,12 +161,14 @@ class SettingsDialog(QDialog):
         self.s.changed.connect(lambda k: k == "zoom" and slider.setValue(round(self.s["zoom"] * 100)))
         zl.addWidget(slider)
         zl.addWidget(label)
-        return [
+        rows = [
             Row("Theme", "Sets the look of the app and of WhatsApp Web itself.", theme),
-            Row("Zoom", "Make WhatsApp larger or smaller (Ctrl + / Ctrl -).", zoom),
-            Row("Menu bar", "Show the menu bar above the window. Press Alt or Ctrl+M at any time.",
-                self._toggle("show_menubar")),
+            Row("Zoom", f"Make WhatsApp larger or smaller ({keys('Ctrl++')} / {keys('Ctrl+-')}).", zoom),
         ]
+        if not platform.is_macos():  # macOS always shows its global menu bar
+            rows.append(Row("Menu bar", "Show the menu bar above the window. Press Alt or "
+                            f"{keys('Ctrl+M')} at any time.", self._toggle("show_menubar")))
+        return rows
 
     def _privacy(self):
         level = QComboBox()
@@ -175,7 +183,7 @@ class SettingsDialog(QDialog):
         note.setWordWrap(True)
         return [
             Row("Blur chat list", "Names, photos and message previews in the chat list are blurred. "
-                "Hover over a row to reveal it (Ctrl+Shift+B).",
+                f"Hover over a row to reveal it ({keys('Ctrl+Shift+B')}).",
                 self._toggle("privacy_blur_list")),
             Row("Blur open conversation", "Messages and the name in the open chat are blurred too; "
                 "hover over a message to read it.", self._toggle("privacy_blur_chat")),
@@ -220,7 +228,7 @@ class SettingsDialog(QDialog):
         return [
             Row("PIN lock", "Ask for a PIN to open the app.", self.lock_switch),
             Row("Change PIN", "Replace the PIN currently in use.", self.change_btn),
-            Row("Lock now", "Lock the app immediately (Ctrl+L).", self.now_btn),
+            Row("Lock now", f"Lock the app immediately ({keys('Ctrl+L')}).", self.now_btn),
             Row("Auto-lock", "Lock after there has been no activity in this window.", self.auto_combo),
             Row("Lock when hidden", "Lock whenever the window is closed to the tray.", self.hide_switch),
             Row("Lock on launch", "Ask for the PIN every time WA Desktop starts.", self.start_switch),

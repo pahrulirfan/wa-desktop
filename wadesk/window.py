@@ -9,7 +9,7 @@ from PySide6.QtWebEngineCore import QWebEnginePage
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QMainWindow, QMenu, QWidget
 
-from . import APP_NAME, WA_URL
+from . import APP_NAME, WA_URL, platform
 from .lock import LockScreen
 from .settings import Settings
 from .theme import Tokens
@@ -18,6 +18,7 @@ from .webpage import WaPage
 from .widgets import StatusOverlay, Toast
 
 ZOOM_MIN, ZOOM_MAX, ZOOM_STEP = 0.5, 2.0, 0.1
+SK = QKeySequence.StandardKey
 UNREAD_RE = re.compile(r"^\((\d+)\)")
 _ACTIVITY_EVENTS = (QEvent.MouseMove, QEvent.MouseButtonPress, QEvent.KeyPress, QEvent.Wheel)
 
@@ -79,7 +80,7 @@ class MainWindow(QMainWindow):
 
         self._build_actions()
         self._build_menus()
-        self.menuBar().setVisible(settings["show_menubar"])
+        self.menuBar().setVisible(settings["show_menubar"] or platform.is_macos())
 
         page.titleChanged.connect(self._on_title)
         page.loadStarted.connect(self._on_load_started)
@@ -93,11 +94,16 @@ class MainWindow(QMainWindow):
         self.overlay.show_loading()
 
     # ---------- actions & menus ----------
-    def _act(self, text, slot=None, shortcut=None, checkable=False) -> QAction:
+    def _act(self, text, slot=None, shortcut=None, checkable=False, standard=None) -> QAction:
+        """shortcut: a portable string ("Ctrl" means Cmd on macOS); standard: the platform's own
+        key binding for the action, tried first (e.g. Cmd+Ctrl+F for fullscreen on macOS)."""
         a = QAction(text, self)
         a.setCheckable(checkable)
-        if shortcut:
-            a.setShortcut(QKeySequence(shortcut))
+        keys = QKeySequence.keyBindings(standard) if standard is not None else []
+        if shortcut and QKeySequence(shortcut) not in keys:
+            keys.append(QKeySequence(shortcut))
+        if keys:
+            a.setShortcuts(keys)
             a.setShortcutContext(Qt.WindowShortcut)
         if slot:
             a.triggered.connect(slot)
@@ -105,15 +111,19 @@ class MainWindow(QMainWindow):
         return a
 
     def _build_actions(self) -> None:
-        self.act_reload = self._act("Reload", self.reload, "Ctrl+R")
-        self.addAction(self._act("Reload (F5)", self.reload, "F5"))
-        self.act_fullscreen = self._act("Fullscreen", self.toggle_fullscreen, "F11", True)
-        self.act_zoom_in = self._act("Zoom in", lambda: self.step_zoom(+ZOOM_STEP), "Ctrl++")
+        mac = platform.is_macos()
+        self.act_reload = self._act("Reload", self.reload, "Ctrl+R", standard=SK.Refresh)
+        self.act_fullscreen = self._act("Fullscreen", self.toggle_fullscreen,
+                                        None if mac else "F11", True, standard=SK.FullScreen)
+        self.act_zoom_in = self._act("Zoom in", lambda: self.step_zoom(+ZOOM_STEP), "Ctrl++",
+                                     standard=SK.ZoomIn)
         self.addAction(self._act("Zoom in", lambda: self.step_zoom(+ZOOM_STEP), "Ctrl+="))
-        self.act_zoom_out = self._act("Zoom out", lambda: self.step_zoom(-ZOOM_STEP), "Ctrl+-")
+        self.act_zoom_out = self._act("Zoom out", lambda: self.step_zoom(-ZOOM_STEP), "Ctrl+-",
+                                      standard=SK.ZoomOut)
         self.act_zoom_reset = self._act("Actual size", lambda: self.set_zoom(1.0), "Ctrl+0")
         self.act_menubar = self._act("Show menu bar", self.toggle_menubar, "Ctrl+M", True)
         self.act_menubar.setChecked(self.settings["show_menubar"])
+        self.act_menubar.setVisible(not mac)  # macOS always has its global menu bar
         self.act_dnd = self._act("Do Not Disturb", lambda c: self.settings.set("dnd", c),
                                  "Ctrl+Shift+D", True)
         self.act_dnd.setChecked(self.settings["dnd"])
@@ -122,11 +132,15 @@ class MainWindow(QMainWindow):
         self.act_privacy.setChecked(self.settings["privacy_blur_list"])
         self.act_lock = self._act("Lock now", self.lock, "Ctrl+L")
         self.act_lock.setEnabled(self.lock_available())
-        self.act_settings = self._act("Settings…", self.settings_requested.emit, "Ctrl+,")
-        self.act_about = self._act("About WA Desktop", self.about_requested.emit)
+        self.act_settings = self._act("Settings…", self.settings_requested.emit, "Ctrl+,",
+                                      standard=SK.Preferences)
+        self.act_settings.setMenuRole(QAction.PreferencesRole)
+        self.act_about = self._act(f"About {APP_NAME}", self.about_requested.emit)
+        self.act_about.setMenuRole(QAction.AboutRole)
         self.act_clear = self._act("Clear cache", self.clear_cache_requested.emit)
-        self.act_hide = self._act("Hide to tray", self.hide, "Ctrl+W")
-        self.act_quit = self._act("Quit", self.quit_requested.emit, "Ctrl+Q")
+        self.act_hide = self._act("Hide window" if mac else "Hide to tray", self.hide, "Ctrl+W")
+        self.act_quit = self._act("Quit", self.quit_requested.emit, "Ctrl+Q", standard=SK.Quit)
+        self.act_quit.setMenuRole(QAction.QuitRole)
 
     def _build_menus(self) -> None:
         mb = self.menuBar()
@@ -283,6 +297,8 @@ class MainWindow(QMainWindow):
         self.act_fullscreen.setChecked(on)
 
     def toggle_menubar(self) -> None:
+        if platform.is_macos():
+            return
         visible = not self.menuBar().isVisible()
         self.menuBar().setVisible(visible)
         self.act_menubar.setChecked(visible)
@@ -292,7 +308,7 @@ class MainWindow(QMainWindow):
         if key == "dnd":
             self.act_dnd.setChecked(self.settings["dnd"])
         elif key == "show_menubar":
-            self.menuBar().setVisible(self.settings["show_menubar"])
+            self.menuBar().setVisible(self.settings["show_menubar"] or platform.is_macos())
             self.act_menubar.setChecked(self.settings["show_menubar"])
         elif key == "zoom":
             self.view.setZoomFactor(self.settings["zoom"])
@@ -330,14 +346,16 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event) -> None:
         self._save_geometry()
-        tray_ok = self.tray is not None and self.tray.isVisible()
+        # On macOS the Dock icon brings the window back even without a menu bar icon.
+        tray_ok = self.tray is not None and (self.tray.isVisible() or platform.is_macos())
         if not self._quitting and self.settings["close_to_tray"] and tray_ok:
             event.ignore()
             self.hide()
-            if not self.settings["tray_hint_shown"]:
+            if not self.settings["tray_hint_shown"] and self.tray.isVisible():
                 self.settings.set("tray_hint_shown", True)
-                self.tray.showMessage(APP_NAME, "The app keeps running in the system tray. "
-                                      "Click its icon to open it again.",
+                where = " in the Dock or menu bar" if platform.is_macos() else ""
+                self.tray.showMessage(APP_NAME, f"The app keeps running in the {platform.tray_place()}. "
+                                      f"Click its icon{where} to open it again.",
                                       self.tray.icon(), 5000)
             return
         event.accept()
@@ -365,6 +383,8 @@ class MainWindow(QMainWindow):
         if t == QEvent.Wheel and event.modifiers() & Qt.ControlModifier:
             self.step_zoom(ZOOM_STEP if event.angleDelta().y() > 0 else -ZOOM_STEP)
             return True
+        if platform.is_macos():
+            return False  # no Alt-toggled menu bar: macOS has a global one
         if t == QEvent.KeyPress:
             self._alt_alone = event.key() == Qt.Key_Alt and not event.isAutoRepeat()
         elif t == QEvent.KeyRelease and event.key() == Qt.Key_Alt and self._alt_alone \
