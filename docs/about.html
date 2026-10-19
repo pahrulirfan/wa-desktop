@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About WA Desktop</title>
+<meta name="description" content="Who makes WA Desktop, how it is built, and the disclaimer.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="images/icon.png">
+<link rel="stylesheet" href="assets/style.css">
+<script>try { var t = localStorage.getItem("theme"); if (t) document.documentElement.setAttribute("data-theme", t); } catch (e) {}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="./"><img src="images/icon.png" alt="" width="30" height="30">WA Desktop</a>
+    <nav class="nav" aria-label="Main">
+      <a href="./#features">Features</a>
+      <a href="./#download">Download</a>
+      <a href="./#install">Install</a>
+      <a href="./#faq">FAQ</a>
+      <a href="about.html" aria-current="page">About</a>
+      <a href="donate.html">Donate</a>
+      <a href="https://github.com/pahrulirfan/wa-desktop">GitHub</a>
+    </nav>
+    <button class="theme-btn" type="button" aria-label="Switch theme">&#9790;</button>
+  </div>
+</header>
+
+<main id="main" class="page">
+  <div class="wrap">
+    <h1>About WA Desktop</h1>
+    <p class="lead">A small, free desktop client for WhatsApp Web on Linux, Windows and macOS, made for people who
+      want WhatsApp in its own window instead of a browser tab.</p>
+
+    <h2>Who makes it</h2>
+    <div class="person">
+      <div class="avatar" aria-hidden="true">PI</div>
+      <p><strong>Pahrul Irfan</strong><br>
+        Lecturer and researcher in Informatics, Faculty of Engineering, Universitas Mataram (Unram), Lombok,
+        Indonesia.</p>
+    </div>
+    <p>WA Desktop started because WhatsApp offers no desktop app for Linux. Pahrul Irfan built it for daily use,
+      then shared it with the Linux community, and it now runs on Windows and macOS as well.</p>
+
+    <h2>Written with the help of Claude</h2>
+    <p>Most of the code, the tests and this documentation were written with the help of <strong>Claude</strong>, an
+      AI assistant made by Anthropic (the Opus model), working in Claude Code. Pahrul Irfan decides which features
+      to build, reviews every change and tries it on real machines. Automated tests run on GitHub for Linux,
+      Windows and macOS on every change, and every release package is started once in CI before it is published.</p>
+
+    <h2>Open source</h2>
+    <ul class="checklist">
+      <li>Source code, issues and releases: <a href="https://github.com/pahrulirfan/wa-desktop">github.com/pahrulirfan/wa-desktop</a></li>
+      <li>Released under the <a href="https://github.com/pahrulirfan/wa-desktop/blob/main/LICENSE">MIT License</a>:
+        you may use, change and share it freely.</li>
+      <li>Contributions are welcome: see the <a href="https://github.com/pahrulirfan/wa-desktop/blob/main/CONTRIBUTING.md">contributing guide</a>.</li>
+      <li>Want to support the project? See the <a href="donate.html">donation page</a>.</li>
+    </ul>
+
+    <h2>Disclaimer</h2>
+    <p>WA Desktop is an independent project. It is not affiliated with, authorised, maintained, sponsored or
+      endorsed by WhatsApp LLC, Meta Platforms, Inc. or any of their affiliates. <em>WhatsApp</em> is a trademark of
+      WhatsApp LLC. The app loads the official WhatsApp Web client and uses no unofficial messaging API; you remain
+      responsible for using it in line with WhatsApp's Terms of Service. The software is provided "as is", without
+      warranty of any kind. The application icon is original artwork.</p>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <nav aria-label="Footer">
+      <a href="./">Home</a>
+      <a href="about.html">About</a>
+      <a href="donate.html">Donate</a>
+      <a href="https://github.com/pahrulirfan/wa-desktop">Source code</a>
+      <a href="https://github.com/pahrulirfan/wa-desktop/issues">Report a bug</a>
+      <a href="https://github.com/pahrulirfan/wa-desktop/blob/main/LICENSE">MIT License</a>
+    </nav>
+    <p>WA Desktop is unofficial, not affiliated with WhatsApp LLC or Meta. WhatsApp is a trademark of WhatsApp LLC.</p>
+  </div>
+</footer>
+<script src="assets/site.js"></script>
+</body>
+</html>

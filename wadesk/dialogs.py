@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (QComboBox, QDialog, QFileDialog, QFrame, QHBoxLay
                                QLineEdit, QListWidget, QMessageBox, QPushButton, QScrollArea,
                                QSlider, QStackedWidget, QVBoxLayout, QWidget)
 
-from . import APP_NAME, __version__, paths, platform
+from . import APP_NAME, HOMEPAGE, __version__, paths, platform
 from .lock import check_new_pin, hash_pin, request_pins, verify_pin
 from .tray import base_pixmap
 from .widgets import ToggleSwitch
@@ -312,16 +312,66 @@ class SettingsDialog(QDialog):
 
 
 def show_about(parent) -> None:
-    box = QMessageBox(parent)
-    box.setWindowTitle("About")
-    box.setIconPixmap(base_pixmap(72))
-    box.setText(f"<h3>{APP_NAME} {__version__}</h3>")
-    box.setInformativeText(
-        "An <b>unofficial</b> desktop client for WhatsApp Web, built with PySide6 "
-        "(Qt WebEngine).<br><br>"
-        "Not affiliated with WhatsApp LLC / Meta. Your messages stay end-to-end encrypted and "
-        "never pass through a third-party server.<br><br>"
-        "<b>Shortcuts:</b> Ctrl+, Settings · Ctrl+L Lock · Ctrl+Shift+B Blur chat list · "
-        "Ctrl+Shift+D Do Not Disturb · Ctrl+± Zoom · F11 Fullscreen · Alt Menu · "
-        "Ctrl+W Hide · Ctrl+Q Quit")
-    box.exec()
+    dlg = QDialog(parent)
+    dlg.setWindowTitle(f"About {APP_NAME}")
+    dlg.setMinimumWidth(460)
+    lay = QVBoxLayout(dlg)
+    lay.setContentsMargins(26, 24, 26, 20)
+    lay.setSpacing(10)
+
+    head = QHBoxLayout()
+    head.setSpacing(16)
+    logo = QLabel()
+    logo.setPixmap(base_pixmap(72))
+    head.addWidget(logo, 0, Qt.AlignTop)
+    title = QVBoxLayout()
+    title.setSpacing(2)
+    name = QLabel(APP_NAME)
+    name.setObjectName("pageTitle")
+    version = QLabel(f"Version {__version__} · Linux, Windows and macOS")
+    version.setObjectName("rowDesc")
+    title.addWidget(name)
+    title.addWidget(version)
+    title.addStretch(1)
+    head.addLayout(title, 1)
+    lay.addLayout(head)
+    lay.addSpacing(4)
+
+    shortcuts = " · ".join(f"{keys(k)} {what}" for k, what in (
+        ("Ctrl+,", "Settings"), ("Ctrl+L", "Lock"), ("Ctrl+Shift+B", "Blur chat list"),
+        ("Ctrl+Shift+D", "Do Not Disturb"), ("Ctrl+W", "Hide"), ("Ctrl+Q", "Quit")))
+    for text, style in (
+        ("An <b>unofficial</b> desktop client for WhatsApp Web, built with PySide6 (Qt WebEngine). "
+         "Your messages stay end-to-end encrypted and never pass through a third-party server.",
+         "rowTitle"),
+        ("Made by <b>Pahrul Irfan</b>, lecturer and researcher in Informatics, Faculty of "
+         "Engineering, Universitas Mataram (Unram), Lombok, Indonesia.", "rowTitle"),
+        ("Most of the code, tests and documentation were written with the help of Claude (Opus), "
+         "an AI assistant made by Anthropic, in Claude Code. Pahrul Irfan decides the features, "
+         "reviews every change and tests it on real machines.", "rowDesc"),
+        ("Not affiliated with, endorsed by or connected to WhatsApp LLC or Meta. "
+         "Released under the MIT License.", "rowDesc"),
+        (f"<b>Shortcuts:</b> {shortcuts}", "rowDesc"),
+    ):
+        label = QLabel(text)
+        label.setObjectName(style)
+        label.setWordWrap(True)
+        label.setTextFormat(Qt.RichText)
+        lay.addWidget(label)
+
+    lay.addSpacing(8)
+    row = QHBoxLayout()
+    for text, page in (("Website", ""), ("About", "about.html"), ("Donate", "donate.html")):
+        btn = QPushButton(text)
+        btn.setCursor(Qt.PointingHandCursor)
+        btn.clicked.connect(lambda _=False, p=page: QDesktopServices.openUrl(QUrl(HOMEPAGE + p)))
+        if text == "Donate":
+            btn.setObjectName("primary")
+        row.addWidget(btn)
+    row.addStretch(1)
+    close = QPushButton("Close")
+    close.setDefault(True)
+    close.clicked.connect(dlg.accept)
+    row.addWidget(close)
+    lay.addLayout(row)
+    dlg.exec()
