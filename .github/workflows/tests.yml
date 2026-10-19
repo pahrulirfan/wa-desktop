@@ -29,9 +29,9 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
           cache: pip
@@ -41,10 +41,12 @@ jobs:
 
       - name: Use a throw-away home folder
         # Nothing may read or write the runner's real configuration.
+        # PIP_CACHE_DIR keeps pip's cache where actions/setup-python saves it after the job.
         run: |
           home="$RUNNER_TEMP/home"
           mkdir -p "$home" "$RUNNER_TEMP/logs"
           {
+            echo "PIP_CACHE_DIR=$(python -m pip cache dir)"
             echo "HOME=$home"
             echo "USERPROFILE=$home"
             echo "APPDATA=$home/AppData/Roaming"
